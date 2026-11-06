@@ -31,6 +31,7 @@
   /* Aura Digital: conservar accesos sociales en publicaciones futuras. */
   const AURA_SOCIAL_IG="https://www.instagram.com/invitacionesauradigital?rpxt=MWpkMHZjOXF5Mnl4dw%3D%3D&utm_source=qr",AURA_SOCIAL_FB="https://www.facebook.com/share/19rHvPb4LE/?mibextid=wwXIfr";
   const AURA_SOCIAL_CSS="\n/* Aura Digital: enlaces sociales discretos en portada */\n.aura-hero-social{display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:20px;width:100%;max-width:100%;margin:18px 0 0}\n.aura-hero-social a{display:inline-flex;align-items:center;gap:8px;min-height:38px;font:500 12px/1.3 var(--body-font);letter-spacing:.015em;color:var(--text);text-decoration:none;opacity:.85;transition:color .2s,opacity .2s}\n.aura-hero-social a:hover{color:var(--accent);opacity:1}\n.aura-hero-social a:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:3px}\n.aura-hero-social a+a{padding-left:20px;border-left:1px solid var(--border)}\n.aura-hero-social svg{width:20px;height:20px;flex:none}\n@media(max-width:720px){.hero .hero-grid{grid-template-areas:\"kicker\" \"title\" \"text\" \"visual\" \"actions\" \"social\" \"benefits\"!important}.hero .aura-hero-social{grid-area:social!important;justify-content:center!important;margin:14px auto 0!important;gap:20px!important}.hero .aura-hero-social a{font-size:11px;min-height:36px}}\n";
+  const AURA_HERO_CTA_CSS="\n/* Aura Digital: prioridades CTA portada v2 */\n.hero .hero-actions{display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:10px!important;margin-top:18px!important}\n.hero .hero-actions .aura-hero-social{order:0;justify-content:flex-start!important;width:auto!important;max-width:100%;margin:0 0 4px!important}\n.hero .hero-actions>a{flex:0 0 auto!important;width:auto!important;max-width:100%;min-width:0!important}\n.hero .hero-actions>a[data-wa]{order:1;min-height:39px!important;padding:8px 15px!important;font-size:.81rem!important;font-weight:650!important;border-radius:10px!important}\n.hero .hero-actions>a[data-hero-secondary-link]{order:2;min-height:38px!important;padding:7px 14px!important;font-size:.82rem!important}\n@media(max-width:720px){.hero .hero-actions{align-items:center!important;margin-top:12px!important;gap:9px!important}.hero .hero-actions .aura-hero-social{justify-content:center!important;margin:0 auto 3px!important;gap:18px!important}.hero .hero-actions .btn{flex:0 0 auto!important;min-width:0!important}}\n";
   function buildWithAuraSocial(state,opts={}){
     const input=clone(state);
     input.contact=input.contact||{};
@@ -45,9 +46,10 @@
     const socials='<nav class="aura-hero-social" aria-label="Redes sociales de Aura Digital">'
       +'<a href="'+inst+'" target="_blank" rel="noopener noreferrer" aria-label="Instagram de Aura Digital"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg><span>Instagram</span></a>'
       +'<a href="'+face+'" target="_blank" rel="noopener noreferrer" aria-label="Facebook de Aura Digital"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.2 21v-8h2.8l.45-3.5H15.2V7.3c0-1.05.3-1.75 1.75-1.75h1.7V2.4a23.5 23.5 0 0 0-2.5-.14c-2.5 0-4.2 1.53-4.2 4.35V9.5H9.2V13h2.75v8z"/></svg><span>Facebook</span></a></nav>';
-    html=html.slice(0,end)+' '+socials+html.slice(end);
+    const socialInsertAt=start+'<div class="hero-actions">'.length;
+    html=html.slice(0,socialInsertAt)+socials+html.slice(socialInsertAt);
     const body=html.indexOf('<body'),style=html.lastIndexOf('</style>',body);
-    if(style>=0)html=html.slice(0,style)+AURA_SOCIAL_CSS+html.slice(style);
+    if(style>=0)html=html.slice(0,style)+AURA_SOCIAL_CSS+AURA_HERO_CTA_CSS+html.slice(style);
     return html;
   }
   window.AURA_PUBLISHER={build:buildWithAuraSocial,assetData,assetPayload,assets:ASSETS};
