@@ -1,0 +1,28 @@
+name: Ajustar orden de accesos de portada Aura
+on:
+  push:
+    paths:
+      - .github/workflows/aura-hero-ctas.yml
+      - scripts/aura_hero_ctas.py
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  ordenar-portada:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obtener WebStudio
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Reordenar accesos y conservarlos al publicar
+        run: python3 scripts/aura_hero_ctas.py
+      - name: Guardar cambios de WebStudio
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add publisher-template.js index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "Conservar redes arriba, WhatsApp compacto y Ver proyectos abajo"
+            git push origin HEAD:main
+          fi
