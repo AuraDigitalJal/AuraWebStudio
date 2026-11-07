@@ -2,10 +2,31 @@
   "source": "Cloudflare Web Analytics",
   "host": "auradigitaljal.com",
   "timezone": "America/Mexico_City",
-  "updated_at": "2026-11-07T03:20:42Z",
+  "updated_at": "2026-11-07T03:27:05Z",
   "visits": {
     "today": 3,
     "days7": 3,
     "days30": 3
+  },
+  "audience": {
+    "period_days": 7,
+    "countries": [
+      {
+        "name": "MX",
+        "visits": 3
+      }
+    ],
+    "devices": [
+      {
+        "name": "mobile",
+        "visits": 3
+      }
+    ],
+    "systems": [
+      {
+        "name": "iOS",
+        "visits": 3
+      }
+    ]
   }
 }
