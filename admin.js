@@ -649,7 +649,7 @@
       if(button)button.disabled=true;
       status.textContent='Consultando estadísticas…';
       try{
-        const url='https://raw.githubusercontent.com/AuraDigitalJal/AuraWebStudio/main/analytics/visitas.json?ts='+Date.now();
+        const url=new URL('analytics/visitas.json', document.baseURI); url.searchParams.set('ts',String(Date.now()));
         const response=await fetch(url,{cache:'no-store'});
         if(!response.ok)throw new Error(response.status===404?'pending':'http');
         const data=await response.json();
