@@ -712,46 +712,111 @@
         parent.appendChild(wrap);
       }
     }
-    async function refreshVisits(){
-      const button=$('#auraVisitReload'), status=$('#auraVisitsState');
-      if(button)button.disabled=true;
-      status.textContent='Consultando estadísticas…';
+    const VISITS_REPORT_REPO='AuraDigitalJal/AuraWebStudio';
+    const VISITS_REPORT_FILE='analytics/visitas.json';
+    const VISITS_WORKFLOW='visitas-web-cloudflare.yml';
+    let updatingFromCloudflare=false;
+
+    // Lee el último reporte desde la API de GitHub: no depende de la caché de Pages.
+    // La lectura es pública; solo el inicio de una consulta nueva requiere GitHub conectado.
+    async function fetchVisitsReport(){
+      const apiUrl='https://api.github.com/repos/'+VISITS_REPORT_REPO+'/contents/'+VISITS_REPORT_FILE+'?ref=main&fresh='+Date.now();
       try{
-        const url=new URL('analytics/visitas.json', document.baseURI); url.searchParams.set('ts',String(Date.now()));
+        const response=await fetch(apiUrl,{cache:'no-store',headers:{'Accept':'application/vnd.github+json'}});
+        if(!response.ok)throw new Error('HTTP '+response.status);
+        const file=await response.json();
+        if(file.encoding!=='base64'||!file.content)throw new Error('Respuesta sin datos');
+        const bytes=Uint8Array.from(atob(file.content.replace(/\s/g,'')),character=>character.charCodeAt(0));
+        return JSON.parse(new TextDecoder().decode(bytes));
+      }catch(apiError){
+        const url=new URL('analytics/visitas.json',document.baseURI);
+        url.searchParams.set('fresh',String(Date.now()));
         const response=await fetch(url,{cache:'no-store'});
-        if(!response.ok)throw new Error(response.status===404?'pending':'http');
-        const data=await response.json();
-        if(data?.host!=='auradigitaljal.com')throw new Error('host');
-        const metrics=data.visits||{};
-        for(const [id,key] of [['auraVisitToday','today'],['auraVisitWeek','days7'],['auraVisitMonth','days30']]){
-          const value=metrics[key];
-          if(typeof value!=='number'||!Number.isFinite(value)||value<0)throw new Error('invalid');
-          $('#'+id).textContent=Math.round(value).toLocaleString('es-MX');
-        }
-        const audience=data.audience;
-        if(audience?.period_days===7){
-          renderAudience('auraVisitCountries',audience.countries,'countries');
-          renderAudience('auraVisitDevices',audience.devices,'devices');
-          renderAudience('auraVisitSystems',audience.systems,'systems');
-        }else{
-          for(const id of ['auraVisitCountries','auraVisitDevices','auraVisitSystems']){
-            const el=$('#'+id);if(el)el.textContent='Datos pendientes de sincronización';
-          }
-        }
-        const updated=new Date(data.updated_at);
-        status.textContent='Visitas registradas por Cloudflare · Actualizado: '+(Number.isNaN(updated.getTime())?'recientemente':updated.toLocaleString('es-MX',{dateStyle:'short',timeStyle:'short',timeZone:'America/Mexico_City'}));
-      }catch(error){
-        if(error.message==='pending'){
-          status.textContent='Medición activa en Cloudflare. Falta conectar la lectura automática al editor.';
-        }else{
-          status.textContent='No se pudieron consultar las cifras. Revisa la conexión o abre Cloudflare.';
-        }
-      }finally{
-        if(button)button.disabled=false;
+        if(!response.ok)throw new Error('No se pudo leer el reporte ('+response.status+').');
+        return response.json();
       }
     }
-    $('#auraVisitReload').addEventListener('click',refreshVisits);
-    refreshVisits();
+
+    function renderVisitsReport(data,suffix=''){
+      if(!data||data.host!=='auradigitaljal.com')throw new Error('Reporte de dominio incorrecto.');
+      const metrics=data.visits||{};
+      const updates=[
+        ['auraVisitToday','today'],['auraVisitWeek','days7'],['auraVisitMonth','days30']
+      ];
+      for(const [id,key] of updates){
+        const value=metrics[key];
+        if(typeof value!=='number'||!Number.isFinite(value)||value<0)throw new Error('Visitas inválidas: '+key);
+      }
+      for(const [id,key] of updates)$('#'+id).textContent=Math.round(metrics[key]).toLocaleString('es-MX');
+      const audience=data.audience;
+      if(audience?.period_days===7){
+        renderAudience('auraVisitCountries',audience.countries,'countries');
+        renderAudience('auraVisitDevices',audience.devices,'devices');
+        renderAudience('auraVisitSystems',audience.systems,'systems');
+      }else{
+        for(const id of ['auraVisitCountries','auraVisitDevices','auraVisitSystems']){
+          const el=$('#'+id);if(el)el.textContent='Datos pendientes de sincronización';
+        }
+      }
+      const updated=new Date(data.updated_at);
+      if(Number.isNaN(updated.getTime()))throw new Error('Fecha del reporte inválida');
+      const minutes=Math.max(0,Math.floor((Date.now()-updated.getTime())/60000));
+      const dateLabel=updated.toLocaleString('es-MX',{dateStyle:'short',timeStyle:'short',timeZone:'America/Mexico_City'});
+      $('#auraVisitsState').textContent='Última consulta a Cloudflare: '+dateLabel+
+        ' · '+(minutes<1?'hace menos de 1 min':'hace '+minutes+' min')+(suffix?' · '+suffix:'');
+    }
+
+    async function refreshVisits(requestNewReading=false){
+      const button=$('#auraVisitReload'),status=$('#auraVisitsState');
+      if(updatingFromCloudflare)return;
+      updatingFromCloudflare=true;
+      button.disabled=true;
+      button.textContent=requestNewReading?'Consultando Cloudflare…':'Cargando…';
+      try{
+        const previous=await fetchVisitsReport();
+        renderVisitsReport(previous);
+        if(!requestNewReading)return;
+        if(!githubState.connected||!githubState.token){
+          renderVisitsReport(previous,'Para consultar Cloudflare ahora, conecta GitHub en Publicar. Este es el último reporte disponible.');
+          return;
+        }
+        status.textContent='Solicitando una lectura nueva a Cloudflare a través de GitHub…';
+        try{
+          await githubApi('/repos/'+VISITS_REPORT_REPO+'/actions/workflows/'+VISITS_WORKFLOW+'/dispatches',{
+            method:'POST',body:{ref:'main'}
+          });
+        }catch(error){
+          renderVisitsReport(previous,'GitHub no autorizó la actualización inmediata: '+error.message);
+          return;
+        }
+        // GitHub Actions consulta Cloudflare y guarda un reporte nuevo.
+        // Solo se anuncia éxito cuando se detecta una marca temporal posterior.
+        const baseline=Date.parse(previous.updated_at);
+        for(let attempt=0;attempt<25;attempt++){
+          await new Promise(resolve=>setTimeout(resolve,2500));
+          status.textContent='Cloudflare: consulta solicitada · esperando reporte nuevo ('+(attempt+1)+')…';
+          try{
+            const current=await fetchVisitsReport();
+            if(Date.parse(current.updated_at)>baseline){
+              renderVisitsReport(current,'Consulta nueva completada');
+              return;
+            }
+          }catch(error){
+            // Un error transitorio de red no debe ocultar el último reporte válido.
+          }
+        }
+        const last=await fetchVisitsReport().catch(()=>previous);
+        renderVisitsReport(last,'La consulta se solicitó, pero el reporte nuevo aún no aparece.');
+      }catch(error){
+        status.textContent='No se pudo actualizar el monitor: '+error.message;
+      }finally{
+        button.disabled=false;
+        button.textContent='↻ Actualizar';
+        updatingFromCloudflare=false;
+      }
+    }
+    $('#auraVisitReload').addEventListener('click',()=>refreshVisits(true));
+    refreshVisits(false);
   }
 
   async function init(){
