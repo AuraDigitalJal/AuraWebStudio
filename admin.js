@@ -603,6 +603,79 @@
     $('#resumeLocalDraft')?.addEventListener('click',()=>restoreSavedDraft(false));
     $('#restorePriorDraft')?.addEventListener('click',()=>restoreSavedDraft(true));
   }
+
+  function setupVisitsPanel(){
+    const intro=$('.intro');
+    if(!intro||$('#auraVisitsPanel'))return;
+    const style=document.createElement('style');
+    style.textContent=[
+      '.aura-visits{margin:17px 0 0;background:#fff;border:1px solid #e2dbd0;border-radius:14px;padding:13px 14px;box-shadow:0 8px 30px rgba(53,47,38,.045)}',
+      '.aura-visits summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;color:#171717;font-size:12px;font-weight:700}',
+      '.aura-visits summary::-webkit-details-marker{display:none}',
+      '.aura-visits summary small{display:block;font-weight:400;color:#817b71;font-size:10px;margin-top:4px}',
+      '.aura-visits-body{padding-top:14px}',
+      '.aura-visits-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}',
+      '.aura-visits-stat{background:#f8f6f1;border:1px solid #eee8dd;border-radius:10px;text-align:center;padding:13px 5px}',
+      '.aura-visits-stat span{display:block;color:#7a7268;font-size:10px}',
+      '.aura-visits-stat strong{display:block;font-size:25px;font-weight:650;margin-top:5px;font-variant-numeric:tabular-nums}',
+      '.aura-visits-footer{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin-top:11px}',
+      '.aura-visits-footer button,.aura-visits-footer a{display:inline-flex;align-items:center;justify-content:center;border:1px solid #ded6cb;background:#fff;color:#37332c;border-radius:8px;text-decoration:none;padding:8px 10px;font:600 10px Inter,Arial,sans-serif;cursor:pointer}',
+      '.aura-visits-footer button:hover,.aura-visits-footer a:hover{background:#f8f6f1}',
+      '.aura-visits-state{color:#777168;font-size:10px;line-height:1.6;margin-top:10px}',
+      '@media(max-width:420px){.aura-visits-stat strong{font-size:22px}.aura-visits{padding:12px}}'
+    ].join('\n');
+    document.head.appendChild(style);
+    const el=document.createElement('details');
+    el.className='aura-visits';
+    el.id='auraVisitsPanel';
+    el.open=true;
+    el.innerHTML=String.raw\`
+      <summary><span>◉ Estadísticas de visitas<small>Solo la página web comercial · auradigitaljal.com</small></span><span aria-hidden="true">⌄</span></summary>
+      <div class="aura-visits-body">
+        <div class="aura-visits-stats">
+          <div class="aura-visits-stat"><span>Hoy</span><strong id="auraVisitToday">—</strong></div>
+          <div class="aura-visits-stat"><span>7 días</span><strong id="auraVisitWeek">—</strong></div>
+          <div class="aura-visits-stat"><span>30 días</span><strong id="auraVisitMonth">—</strong></div>
+        </div>
+        <p class="aura-visits-state" id="auraVisitsState" role="status">Consultando estadísticas…</p>
+        <div class="aura-visits-footer">
+          <button type="button" id="auraVisitReload">↻ Actualizar</button>
+          <a href="https://dash.cloudflare.com/" target="_blank" rel="noopener noreferrer">Abrir Cloudflare ↗</a>
+        </div>
+      </div>\`;
+    intro.appendChild(el);
+    async function refreshVisits(){
+      const button=$('#auraVisitReload'), status=$('#auraVisitsState');
+      if(button)button.disabled=true;
+      status.textContent='Consultando estadísticas…';
+      try{
+        const url='https://raw.githubusercontent.com/AuraDigitalJal/AuraWebStudio/main/analytics/visitas.json?ts='+Date.now();
+        const response=await fetch(url,{cache:'no-store'});
+        if(!response.ok)throw new Error(response.status===404?'pending':'http');
+        const data=await response.json();
+        if(data?.host!=='auradigitaljal.com')throw new Error('host');
+        const metrics=data.visits||{};
+        for(const [id,key] of [['auraVisitToday','today'],['auraVisitWeek','days7'],['auraVisitMonth','days30']]){
+          const value=metrics[key];
+          if(typeof value!=='number'||!Number.isFinite(value)||value<0)throw new Error('invalid');
+          $('#'+id).textContent=Math.round(value).toLocaleString('es-MX');
+        }
+        const updated=new Date(data.updated_at);
+        status.textContent='Visitas registradas por Cloudflare · Actualizado: '+(Number.isNaN(updated.getTime())?'recientemente':updated.toLocaleString('es-MX',{dateStyle:'short',timeStyle:'short',timeZone:'America/Mexico_City'}));
+      }catch(error){
+        if(error.message==='pending'){
+          status.textContent='Medición activa en Cloudflare. Falta conectar la lectura automática al editor.';
+        }else{
+          status.textContent='No se pudieron consultar las cifras. Revisa la conexión o abre Cloudflare.';
+        }
+      }finally{
+        if(button)button.disabled=false;
+      }
+    }
+    $('#auraVisitReload').addEventListener('click',refreshVisits);
+    refreshVisits();
+  }
+
   async function init(){
     setStatus('Consultando última versión publicada…');
     setProjectSource('Comprobando la página publicada…');
@@ -618,7 +691,7 @@
       console.warn('No se pudo consultar la publicación; se conserva el proyecto local.',err);
       state=normalizeState(deepMerge(structuredClone(base),local||{}));
     }
-    renderAll();bindEditor();bindPreview();bindFileActions();bindGithub();hardRefreshPreview();
+    renderAll();setupVisitsPanel();bindEditor();bindPreview();bindFileActions();bindGithub();hardRefreshPreview();
     if(loadedFromPublic){
       setStatus('Última versión publicada cargada');
       setProjectSource('Origen: última versión publicada · auradigitaljal.com');
