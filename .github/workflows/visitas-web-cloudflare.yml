@@ -35,8 +35,24 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add analytics/visitas.json
-          if ! git diff --cached --quiet; then
+          # Conservar la nueva estadística, sin sobrescribir otros cambios del editor.
+          cp analytics/visitas.json "$RUNNER_TEMP/visitas.json"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            cp "$RUNNER_TEMP/visitas.json" analytics/visitas.json
+            git add analytics/visitas.json
+            if git diff --cached --quiet; then
+              echo "El reporte ya coincide con el guardado."
+              exit 0
+            fi
             git commit -m "Actualizar resumen de visitas de Aura Digital"
-            git push origin HEAD:main
-          fi
+            if git push origin HEAD:main; then
+              echo "Reporte publicado correctamente."
+              exit 0
+            fi
+            echo "Cambio concurrente; reintentando."
+            sleep 2
+          done
+          echo "Error: no se pudo publicar el reporte."
+          exit 1
