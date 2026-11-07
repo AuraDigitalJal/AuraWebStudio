@@ -66,6 +66,9 @@ jobs:
           for key in ("today","days7","days30"):
               if not isinstance(metrics.get(key),int):
                   raise RuntimeError("Falta un contador real: "+key)
+          if not isinstance(payload.get("audience",{}).get("browsers"),list):
+              raise RuntimeError("Cloudflare no devolvio la clasificacion de navegadores")
+          print("Navegadores recibidos:",payload["audience"]["browsers"][:5])
           print("Consulta directa confirmada:", metrics)
           print("Actualizado:",payload["updated_at"])
           PY
