@@ -629,7 +629,7 @@
     el.className='aura-visits';
     el.id='auraVisitsPanel';
     el.open=true;
-    el.innerHTML=String.raw\`
+    el.innerHTML=String.raw`
       <summary><span>◉ Estadísticas de visitas<small>Solo la página web comercial · auradigitaljal.com</small></span><span aria-hidden="true">⌄</span></summary>
       <div class="aura-visits-body">
         <div class="aura-visits-stats">
@@ -642,7 +642,7 @@
           <button type="button" id="auraVisitReload">↻ Actualizar</button>
           <a href="https://dash.cloudflare.com/" target="_blank" rel="noopener noreferrer">Abrir Cloudflare ↗</a>
         </div>
-      </div>\`;
+      </div>`;
     intro.appendChild(el);
     async function refreshVisits(){
       const button=$('#auraVisitReload'), status=$('#auraVisitsState');
