@@ -1,7 +1,7 @@
 name: Aura Digital - Actualizar visitas Cloudflare
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '17 * * * *'
   workflow_dispatch:
 permissions:
   contents: write
@@ -11,15 +11,20 @@ concurrency:
 jobs:
   visits:
     runs-on: ubuntu-latest
+    env:
+      CF_ANALYTICS_TOKEN: ${{ secrets.CF_ANALYTICS_TOKEN }}
+      CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
     steps:
       - name: Descargar Aura Web Studio
         uses: actions/checkout@v4
+      - name: Estado de conexión
+        if: ${{ env.CF_ANALYTICS_TOKEN == '' || env.CF_ACCOUNT_ID == '' }}
+        run: echo "Conexión de lectura de Cloudflare pendiente. No se publican cifras inventadas."
       - name: Consultar visitas reales en Cloudflare
-        env:
-          CF_ANALYTICS_TOKEN: ${{ secrets.CF_ANALYTICS_TOKEN }}
-          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        if: ${{ env.CF_ANALYTICS_TOKEN != '' && env.CF_ACCOUNT_ID != '' }}
         run: python3 scripts/update_web_visits.py
       - name: Publicar resumen sin credenciales
+        if: ${{ env.CF_ANALYTICS_TOKEN != '' && env.CF_ACCOUNT_ID != '' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
