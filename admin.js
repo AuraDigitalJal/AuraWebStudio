@@ -660,10 +660,10 @@
             <section class="aura-audience-card" aria-label="Visitas por sistema operativo"><h3>Sistemas operativos</h3><div class="aura-audience-items" id="auraVisitSystems"><span class="aura-audience-empty">Cargando…</span></div></section>
           </div>
         </div>
-        <p class="aura-visits-state" id="auraVisitsState" role="status">Consultando estadísticas…</p>
+        <p class="aura-visits-state" id="auraVisitsState" role="status">Los datos se sincronizan aproximadamente cada 15 minutos.</p>
         <div class="aura-visits-footer">
-          <button type="button" id="auraVisitReload">↻ Actualizar</button>
-          <a href="https://dash.cloudflare.com/" target="_blank" rel="noopener noreferrer">Abrir Cloudflare ↗</a>
+          <button type="button" id="auraVisitReload">↻ Ver últimos datos</button>
+          <a href="https://dash.cloudflare.com/" target="_blank" rel="noopener noreferrer">Ver visitas en Cloudflare ↗</a>
         </div>
       </div>`;
     intro.appendChild(el);
@@ -713,8 +713,6 @@
       }
     }
     const VISITS_REPORT_REPO='AuraDigitalJal/AuraWebStudio';
-    const VISITS_REPORT_FILE='analytics/visitas.json';
-    const VISITS_WORKFLOW='visitas-web-cloudflare.yml';
     let updatingFromCloudflare=false;
 
     // Lee el último reporte desde la API de GitHub: no depende de la caché de Pages.
@@ -766,66 +764,27 @@
         ' · '+(minutes<1?'hace menos de 1 min':'hace '+minutes+' min')+(suffix?' · '+suffix:'');
     }
 
-    async function refreshVisits(requestNewReading=false){
+    async function refreshVisits(showNotice=false){
       const button=$('#auraVisitReload'),status=$('#auraVisitsState');
       if(updatingFromCloudflare)return;
       updatingFromCloudflare=true;
       button.disabled=true;
-      button.textContent=requestNewReading?'Consultando Cloudflare…':'Cargando…';
+      button.textContent='Consultando último reporte…';
       try{
-        const previous=await fetchVisitsReport();
-        renderVisitsReport(previous);
-        if(!requestNewReading)return;
-        if(!githubState.connected||!githubState.token){
-          renderVisitsReport(previous,'Para consultar Cloudflare ahora, conecta GitHub en Publicar. Este es el último reporte disponible.');
-          return;
-        }
-        status.textContent='Solicitando una lectura nueva a Cloudflare a través de GitHub…';
-        try{
-          await githubApi('/repos/'+VISITS_REPORT_REPO+'/actions/workflows/'+VISITS_WORKFLOW+'/dispatches',{
-            method:'POST',body:{ref:'main'}
-          });
-        }catch(error){
-          // Algunos tokens del editor permiten escribir en el repositorio,
-          // aunque no tengan el permiso específico Actions: write.
-          try{
-            await githubApi('/repos/'+VISITS_REPORT_REPO+'/dispatches',{
-              method:'POST',body:{event_type:'aura-visits-refresh'}
-            });
-          }catch(fallbackError){
-            renderVisitsReport(previous,'No se pudo solicitar una nueva lectura a Cloudflare: '+fallbackError.message+
-              '. Revisa el acceso a AuraWebStudio en GitHub.');
-            return;
-          }
-        }
-        // GitHub Actions consulta Cloudflare y guarda un reporte nuevo.
-        // Solo se anuncia éxito cuando se detecta una marca temporal posterior.
-        const baseline=Date.parse(previous.updated_at);
-        for(let attempt=0;attempt<25;attempt++){
-          await new Promise(resolve=>setTimeout(resolve,2500));
-          status.textContent='Cloudflare: consulta solicitada · esperando reporte nuevo ('+(attempt+1)+')…';
-          try{
-            const current=await fetchVisitsReport();
-            if(Date.parse(current.updated_at)>baseline){
-              renderVisitsReport(current,'Consulta nueva completada');
-              return;
-            }
-          }catch(error){
-            // Un error transitorio de red no debe ocultar el último reporte válido.
-          }
-        }
-        const last=await fetchVisitsReport().catch(()=>previous);
-        renderVisitsReport(last,'La consulta se solicitó, pero el reporte nuevo aún no aparece.');
+        const data=await fetchVisitsReport();
+        renderVisitsReport(data,showNotice?'Último reporte disponible':'');
       }catch(error){
-        status.textContent='No se pudo actualizar el monitor: '+error.message;
+        status.textContent='No se pudo consultar el último reporte: '+error.message;
       }finally{
         button.disabled=false;
-        button.textContent='↻ Actualizar';
+        button.textContent='↻ Ver últimos datos';
         updatingFromCloudflare=false;
       }
     }
     $('#auraVisitReload').addEventListener('click',()=>refreshVisits(true));
     refreshVisits(false);
+    // Mantener el monitor al día si el editor sigue abierto.
+    setInterval(()=>{if(document.visibilityState==='visible')refreshVisits(false)},60000);
   }
 
   async function init(){
