@@ -2,10 +2,10 @@
   "source": "Cloudflare Web Analytics",
   "host": "auradigitaljal.com",
   "timezone": "America/Mexico_City",
-  "updated_at": "2026-11-07T03:19:50Z",
+  "updated_at": "2026-11-07T03:20:42Z",
   "visits": {
-    "today": 2,
-    "days7": 2,
-    "days30": 0
+    "today": 3,
+    "days7": 3,
+    "days30": 3
   }
 }
