@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#151817">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="description" content="Monitor de visitas de Aura Digital. Estadísticas actuales de Cloudflare.">
+  <title>Estadísticas · Aura Digital</title>
+  <style>
+    :root{color-scheme:dark;--bg:#141716;--surface:#1d211f;--surface2:#252a27;--line:#353a36;--text:#f3f0e8;--muted:#acaea5;--gold:#d8bb88;--gold2:#9d855e;--ok:#a3dbb6;--bad:#f7bdad}
+    *,*::before,*::after{box-sizing:border-box}
+    html{-webkit-text-size-adjust:100%;background:var(--bg)}
+    body{margin:0;color:var(--text);background:radial-gradient(circle at 95% -10%,#36332b 0,transparent 36%),linear-gradient(#151817,#131614);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Arial,sans-serif;min-height:100vh;min-height:100dvh}
+    button,a{-webkit-tap-highlight-color:transparent}
+    button:focus-visible,a:focus-visible{outline:2px solid var(--gold);outline-offset:4px}
+    .wrap{max-width:980px;padding:0 21px calc(42px + env(safe-area-inset-bottom));margin:auto}
+    header{min-height:94px;padding:calc(18px + env(safe-area-inset-top)) 0 23px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line)}
+    .brand{display:flex;align-items:center;gap:11px}
+    .monogram{width:40px;height:40px;border-radius:13px;border:1px solid #82735d;display:grid;place-items:center;color:#e0c59b;font:500 24px Georgia,serif;background:linear-gradient(145deg,#343229,#1d211e)}
+    .brand strong{display:block;font-size:14px;letter-spacing:.13em;font-weight:650;text-transform:uppercase}
+    .brand span{display:block;font-size:10px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:4px}
+    .tag{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);padding:9px 11px;border-radius:100px;font-size:11px;color:var(--muted);white-space:nowrap}
+    .dot{height:7px;width:7px;background:#81857f;border-radius:50%;display:inline-block}
+    .tag.online .dot{background:var(--ok);box-shadow:0 0 0 4px #a3dbb619}
+    .tag.error .dot{background:var(--bad)}
+    main{padding-top:34px}
+    .eyebrow{font-size:11px;letter-spacing:.23em;color:var(--gold);text-transform:uppercase;font-weight:650}
+    h1{font:400 clamp(37px,7vw,59px)/1.1 Georgia,"Times New Roman",serif;letter-spacing:-.035em;margin:14px 0 11px}
+    .lede{max-width:570px;color:var(--muted);font-size:14px;line-height:1.65;margin:0}
+    .toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:13px;margin-top:24px;margin-bottom:26px}
+    .refresh{appearance:none;cursor:pointer;border:1px solid #c0a779;background:var(--gold);color:#22231f;border-radius:11px;min-height:46px;padding:12px 17px;font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:10px;transition:transform .15s ease,opacity .15s ease}
+    .refresh:active{transform:scale(.98)}
+    .refresh:disabled{opacity:.7;cursor:wait}
+    .refresh svg{width:16px;height:16px}
+    .spin svg{animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .last{font-size:11px;color:var(--muted);line-height:1.55;max-width:380px}
+    .alert{display:none;border:1px solid #866051;background:#3a2924;color:#ffdbc9;border-radius:12px;padding:12px 14px;font-size:12px;line-height:1.5;margin-bottom:18px}
+    .alert.show{display:block}
+    .totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+    .total{border:1px solid var(--line);border-radius:18px;padding:23px 22px 22px;background:linear-gradient(145deg,#262b27,#1d221f);min-height:144px;display:flex;flex-direction:column;justify-content:space-between}
+    .total:first-child{border-color:#9b8155;background:linear-gradient(135deg,#3b362b,#292821 70%,#222520)}
+    .total .label{font-size:12px;color:#d3cfc4;letter-spacing:.01em}
+    .total .value{font-size:clamp(36px,5vw,54px);line-height:1.05;letter-spacing:-.05em;font-variant-numeric:tabular-nums;font-weight:600}
+    .total small{font-size:10px;color:var(--muted);margin-top:10px}
+    .sectionhead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:33px 0 17px}
+    .sectionhead h2{font-size:20px;font-weight:550;margin:0;letter-spacing:-.025em}
+    .sectionhead p{font-size:11px;color:var(--muted);margin:0;text-align:right}
+    .breakdown{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+    .panel{border:1px solid var(--line);border-radius:18px;background:#1d221f;padding:21px 21px 24px;min-height:180px;overflow:hidden}
+    .paneltitle{display:flex;gap:10px;align-items:center;margin-bottom:20px;color:#e6e3d9}
+    .panelicon{width:32px;height:32px;background:#35362e;border:1px solid #5c584d;color:var(--gold);border-radius:10px;display:grid;place-items:center;font-size:16px}
+    .panel h3{font-size:14px;font-weight:600;letter-spacing:.005em;margin:0}
+    .entries{display:flex;flex-direction:column;gap:16px}
+    .entry{display:flex;flex-direction:column;gap:7px}
+    .entrytext{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .entryname{font-size:12px;color:#f1eee5;overflow-wrap:anywhere}
+    .entrycount{font-size:12px;color:var(--gold);font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}
+    .sub{font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums;margin-left:5px;font-weight:450}
+    .bar{height:5px;background:#363a35;border-radius:99px;overflow:hidden}
+    .fill{background:linear-gradient(90deg,var(--gold2),var(--gold));height:100%;border-radius:99px;width:0}
+    .empty{font-size:12px;color:var(--muted);line-height:1.5}
+    .footnote{margin:23px 2px 35px;font-size:11px;line-height:1.6;color:#9b9f96}
+    footer{border-top:1px solid var(--line);padding:22px 0 8px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--muted)}
+    footer a{color:var(--gold);text-decoration:none}
+    .homehint{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:12px;padding:12px 13px;line-height:1.6;margin-top:14px}
+    .homehint strong{color:var(--text);font-weight:550}
+    @media(max-width:620px){
+      .wrap{padding-left:16px;padding-right:16px}
+      header{min-height:83px;padding-bottom:16px}
+      main{padding-top:28px}
+      .monogram{width:36px;height:36px}
+      .brand strong{font-size:12px}.brand span{font-size:9px}
+      .tag{font-size:10px;padding:8px 9px}
+      h1{font-size:42px}
+      .totals{gap:9px}
+      .total{padding:16px 12px;min-height:118px;border-radius:13px}
+      .total .value{font-size:34px}
+      .total .label{font-size:11px}
+      .total small{font-size:9px}
+      .breakdown{grid-template-columns:1fr;gap:11px}
+      .panel{padding:19px;border-radius:15px;min-height:160px}
+      .toolbar{align-items:stretch;gap:10px}
+      .refresh{width:100%;justify-content:center}
+      .last{margin-top:2px;max-width:100%}
+      .sectionhead{margin-top:29px}
+    }
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand" aria-label="Aura Digital">
+        <div class="monogram" aria-hidden="true">A</div>
+        <div><strong>Aura Digital</strong><span>Estadísticas web</span></div>
+      </div>
+      <span class="tag" id="connection"><i class="dot" aria-hidden="true"></i><span id="connection-text">Conectando</span></span>
+    </header>
+    <main>
+      <div class="eyebrow">Monitor de visitas</div>
+      <h1>Tu página, en números.</h1>
+      <p class="lede">Consulta las visitas a la página comercial de Aura Digital. Datos directamente de Cloudflare, sin entrar al editor.</p>
+      <div class="toolbar">
+        <button class="refresh" id="refresh" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M5.5 9A7 7 0 0 1 18.4 7L20 12"/><path d="M4 12l1.6 5A7 7 0 0 0 18.5 15"/></svg>
+          <span id="refresh-label">Actualizar ahora</span>
+        </button>
+        <div class="last" id="updated" role="status" aria-live="polite">Consultando Cloudflare…</div>
+      </div>
+      <div class="alert" id="alert" role="alert"></div>
+      <section class="totals" aria-label="Visitas totales por periodo">
+        <div class="total"><span class="label">Hoy</span><strong class="value" id="today">—</strong><small>Visitas del día</small></div>
+        <div class="total"><span class="label">7 días</span><strong class="value" id="days7">—</strong><small>Última semana</small></div>
+        <div class="total"><span class="label">30 días</span><strong class="value" id="days30">—</strong><small>Último mes</small></div>
+      </section>
+      <div class="sectionhead"><h2>Quién visita tu web</h2><p>Desglose · últimos 7 días</p></div>
+      <section class="breakdown" aria-label="Perfil de las visitas">
+        <article class="panel">
+          <div class="paneltitle"><span class="panelicon" aria-hidden="true">◎</span><h3>Países</h3></div>
+          <div class="entries" id="countries"><span class="empty">Consultando datos…</span></div>
+        </article>
+        <article class="panel">
+          <div class="paneltitle"><span class="panelicon" aria-hidden="true">▣</span><h3>Dispositivos</h3></div>
+          <div class="entries" id="devices"><span class="empty">Consultando datos…</span></div>
+        </article>
+        <article class="panel">
+          <div class="paneltitle"><span class="panelicon" aria-hidden="true">⌘</span><h3>Sistemas operativos</h3></div>
+          <div class="entries" id="systems"><span class="empty">Consultando datos…</span></div>
+        </article>
+        <article class="panel">
+          <div class="paneltitle"><span class="panelicon" aria-hidden="true">◉</span><h3>Navegadores</h3></div>
+          <div class="entries" id="browsers"><span class="empty">Consultando datos…</span></div>
+        </article>
+      </section>
+      <p class="footnote">Las cifras representan visitas, no necesariamente personas únicas. Solo se incluye la página comercial auradigitaljal.com; no las invitaciones ni las galerías. Cloudflare puede tardar un poco en procesar visitas recientes.</p>
+      <div class="homehint"><strong>Acceso rápido desde iPhone:</strong> abre esta página en Safari y usa Compartir → Agregar a pantalla de inicio.</div>
+    </main>
+    <footer><span>© Aura Digital · Monitor web</span><a href="https://auradigitaljal.com/" target="_blank" rel="noopener noreferrer">Ir a la página principal ↗</a></footer>
+  </div>
+  <script>
+    (() => {
+      'use strict';
+      const ENDPOINT='https://rcstxomjsmvqtpxoekyk.supabase.co/functions/v1/aura-live-visits';
+      const ids=['countries','devices','systems','browsers'];
+      const byId=id=>document.getElementById(id);
+      const fmt=new Intl.NumberFormat('es-MX');
+      const regionNames=typeof Intl.DisplayNames==='function'?new Intl.DisplayNames(['es-MX'],{type:'region'}):null;
+      let working=false;
+      let lastSuccess=0;
+
+      function label(value,type){
+        const name=String(value||'No identificado');
+        const aliases={
+          devices:{mobile:'Celular',desktop:'Computadora',tablet:'Tablet',unknown:'Desconocido'},
+          systems:{MacOSX:'macOS',MacOS:'macOS',iOS:'iOS',Android:'Android',Windows:'Windows',Linux:'Linux',ChromeOS:'ChromeOS'},
+          browsers:{MobileSafari:'Safari móvil',Safari:'Safari',ChromeMobile:'Chrome móvil',ChromeMobileiOS:'Chrome en iOS',CriOS:'Chrome en iOS',Chrome:'Chrome',Firefox:'Firefox',FirefoxMobile:'Firefox móvil',Edge:'Microsoft Edge',EdgeMobile:'Edge móvil',SamsungBrowser:'Samsung Internet',Opera:'Opera',OperaMobile:'Opera móvil'}
+        };
+        if(type==='countries'){
+          if(name==='Mexico'||name==='MX')return 'México';
+          if(name==='United States')return 'Estados Unidos';
+          if(/^[A-Z]{2}$/.test(name)&&regionNames){
+            try{return regionNames.of(name)||name}catch(e){return name}
+          }
+        }
+        return aliases[type]?.[name]||name;
+      }
+      function setConnection(state,text){
+        const el=byId('connection'); el.className='tag '+state; byId('connection-text').textContent=text;
+      }
+      function setError(message){
+        const el=byId('alert');el.textContent=message;el.classList.add('show');
+      }
+      function clearError(){
+        byId('alert').classList.remove('show');byId('alert').textContent='';
+      }
+      function renderRows(type,items){
+        const root=byId(type); root.replaceChildren();
+        const valid=Array.isArray(items)?items.filter(x=>x&&typeof x.name==='string'&&Number.isFinite(x.visits)&&x.visits>0):[];
+        if(!valid.length){const empty=document.createElement('span');empty.className='empty';empty.textContent='Sin datos por ahora.';root.appendChild(empty);return;}
+        const total=valid.reduce((sum,v)=>sum+v.visits,0);
+        for(const item of valid.slice(0,8)){
+          const pct=total>0?100*item.visits/total:0;
+          const row=document.createElement('div');row.className='entry';
+          const text=document.createElement('div');text.className='entrytext';
+          const title=document.createElement('span');title.className='entryname';title.textContent=label(item.name,type);
+          const count=document.createElement('span');count.className='entrycount';count.textContent=fmt.format(item.visits);
+          const percent=document.createElement('span');percent.className='sub';percent.textContent=Math.round(pct)+'%';
+          count.appendChild(percent);text.append(title,count);
+          const bar=document.createElement('div');bar.className='bar';bar.setAttribute('aria-hidden','true');
+          const fill=document.createElement('div');fill.className='fill';fill.style.width=Math.max(0,Math.min(100,pct))+'%';
+          bar.appendChild(fill);row.append(text,bar);root.appendChild(row);
+        }
+      }
+      function render(data){
+        if(data?.live!==true||data?.host!=='auradigitaljal.com')throw Error('El servidor no devolvió una medición en vivo.');
+        const v=data.visits||{};
+        for(const key of ['today','days7','days30']){
+          if(!Number.isFinite(v[key])||v[key]<0)throw Error('Las cifras recibidas no son válidas.');
+        }
+        byId('today').textContent=fmt.format(v.today);
+        byId('days7').textContent=fmt.format(v.days7);
+        byId('days30').textContent=fmt.format(v.days30);
+        for(const type of ids)renderRows(type,data.audience?.[type]);
+        const ts=new Date(data.updated_at);
+        if(Number.isNaN(ts.getTime()))throw Error('La respuesta no incluye una hora válida.');
+        const time=ts.toLocaleString('es-MX',{timeZone:'America/Mexico_City',dateStyle:'medium',timeStyle:'short'});
+        byId('updated').textContent='Última consulta a Cloudflare: '+time+' (hora de México)';
+        setConnection('online','Conectado');
+        lastSuccess=Date.now();
+      }
+      async function refresh(){
+        if(working)return;
+        working=true;
+        const button=byId('refresh');
+        button.disabled=true;button.classList.add('spin');
+        byId('refresh-label').textContent='Actualizando…';
+        byId('updated').textContent=lastSuccess?'Solicitando nuevos datos a Cloudflare…':'Conectando con Cloudflare…';
+        clearError();
+        const ctl=new AbortController();
+        const timeout=setTimeout(()=>ctl.abort(),20000);
+        try{
+          const url=ENDPOINT+'?t='+Date.now();
+          const res=await fetch(url,{cache:'no-store',credentials:'omit',signal:ctl.signal,headers:{Accept:'application/json'}});
+          if(!res.ok)throw Error('El servidor respondió con un error ('+res.status+').');
+          render(await res.json());
+        }catch(err){
+          setConnection('error','Sin conexión');
+          setError('No pudimos consultar Cloudflare en este momento. '+(err?.name==='AbortError'?'La consulta tardó demasiado.':'Intenta actualizar nuevamente.'));
+          byId('updated').textContent=lastSuccess?'Última consulta completada anteriormente. Los datos visibles pueden estar desactualizados.':'No se pudieron cargar las estadísticas.';
+        }finally{
+          clearTimeout(timeout);working=false;button.disabled=false;
+          button.classList.remove('spin');byId('refresh-label').textContent='Actualizar ahora';
+        }
+      }
+      byId('refresh').addEventListener('click',refresh);
+      document.addEventListener('visibilitychange',()=>{
+        if(document.visibilityState==='visible'&&Date.now()-lastSuccess>120000)refresh();
+      });
+      refresh();
+    })();
+  </script>
+</body>
+</html>
