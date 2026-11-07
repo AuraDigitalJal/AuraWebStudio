@@ -786,8 +786,17 @@
             method:'POST',body:{ref:'main'}
           });
         }catch(error){
-          renderVisitsReport(previous,'GitHub no autorizó la actualización inmediata: '+error.message);
-          return;
+          // Algunos tokens del editor permiten escribir en el repositorio,
+          // aunque no tengan el permiso específico Actions: write.
+          try{
+            await githubApi('/repos/'+VISITS_REPORT_REPO+'/dispatches',{
+              method:'POST',body:{event_type:'aura-visits-refresh'}
+            });
+          }catch(fallbackError){
+            renderVisitsReport(previous,'No se pudo solicitar una nueva lectura a Cloudflare: '+fallbackError.message+
+              '. Revisa el acceso a AuraWebStudio en GitHub.');
+            return;
+          }
         }
         // GitHub Actions consulta Cloudflare y guarda un reporte nuevo.
         // Solo se anuncia éxito cuando se detecta una marca temporal posterior.
