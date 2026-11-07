@@ -25,6 +25,10 @@
       .replace(/<meta property="og:url" content="[^"]*">/i,`<meta property="og:url" content="${ogUrl}">`)
       .replace(/<meta property="og:image" content="[^"]*">/i,`<meta property="og:image" content="${ogImage}">`);
     for(const [path,data] of Object.entries(ASSETS))out=out.split(path).join(data);
+    // Solo la publicación oficial se contabiliza, nunca las vistas previas del editor.
+    if(opts.publicUrl && !out.includes('static.cloudflareinsights.com/beacon.min.js')){
+      out=out.replace('</body>',"<!-- Cloudflare Web Analytics --><script type=\"module\" src=\"https://static.cloudflareinsights.com/beacon.min.js\" data-cf-beacon='{\"token\":\"a1cbe51ed62c497caceb31cc91309081\"}'></script><!-- End Cloudflare Web Analytics -->"+'\n</body>');
+    }
     return out;
   }
 
