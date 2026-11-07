@@ -626,7 +626,7 @@
       '.aura-audience-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}',
       '.aura-audience-title strong{font-size:11px;color:#29251f}',
       '.aura-audience-title span{font-size:9px;color:#817b71}',
-      '.aura-audience-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}',
+      '.aura-audience-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}',
       '.aura-audience-card{background:#faf8f4;border:1px solid #ece4d8;border-radius:10px;padding:12px 9px;min-width:0}',
       '.aura-audience-card h3{font-size:10px;margin:0 0 10px;color:#4e463e;font-weight:700}',
       '.aura-audience-items{display:grid;gap:9px}',
@@ -658,6 +658,7 @@
             <section class="aura-audience-card" aria-label="Visitas por país"><h3>Países</h3><div class="aura-audience-items" id="auraVisitCountries"><span class="aura-audience-empty">Cargando…</span></div></section>
             <section class="aura-audience-card" aria-label="Visitas por dispositivo"><h3>Dispositivos</h3><div class="aura-audience-items" id="auraVisitDevices"><span class="aura-audience-empty">Cargando…</span></div></section>
             <section class="aura-audience-card" aria-label="Visitas por sistema operativo"><h3>Sistemas operativos</h3><div class="aura-audience-items" id="auraVisitSystems"><span class="aura-audience-empty">Cargando…</span></div></section>
+            <section class="aura-audience-card" aria-label="Visitas por navegador"><h3>Navegadores</h3><div class="aura-audience-items" id="auraVisitBrowsers"><span class="aura-audience-empty">Cargando…</span></div></section>
           </div>
         </div>
         <p class="aura-visits-state" id="auraVisitsState" role="status">Consulta directa a Cloudflare cada vez que actualices.</p>
@@ -678,6 +679,24 @@
         return value;
       }
       if(type==='devices')return ({mobile:'Celular',desktop:'Computadora',tablet:'Tablet',unknown:'Desconocido'})[value.toLowerCase()]||value;
+      if(type==='browsers'){
+        const names={
+          MobileSafari:'Safari (móvil)',
+          Safari:'Safari',
+          ChromeMobile:'Chrome (móvil)',
+          Chrome:'Chrome',
+          ChromeMobileiOS:'Chrome (iOS)',
+          CriOS:'Chrome (iOS)',
+          Firefox:'Firefox',
+          FirefoxMobile:'Firefox (móvil)',
+          Edge:'Microsoft Edge',
+          EdgeMobile:'Edge (móvil)',
+          SamsungBrowser:'Samsung Internet',
+          Opera:'Opera',
+          OperaMobile:'Opera (móvil)'
+        };
+        return names[value]||value;
+      }
       return ({MacOSX:'macOS',MacOS:'macOS',macOS:'macOS',iOS:'iOS',Android:'Android',Windows:'Windows',Linux:'Linux',ChromeOS:'ChromeOS'})[value]||value;
     }
     function renderAudience(id,items,type){
@@ -746,8 +765,9 @@
         renderAudience('auraVisitCountries',audience.countries,'countries');
         renderAudience('auraVisitDevices',audience.devices,'devices');
         renderAudience('auraVisitSystems',audience.systems,'systems');
+        renderAudience('auraVisitBrowsers',audience.browsers,'browsers');
       }else{
-        for(const id of ['auraVisitCountries','auraVisitDevices','auraVisitSystems']){
+        for(const id of ['auraVisitCountries','auraVisitDevices','auraVisitSystems','auraVisitBrowsers']){
           const el=$('#'+id);if(el)el.textContent='Datos pendientes de sincronización';
         }
       }
