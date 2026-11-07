@@ -33,6 +33,10 @@ query AuraVisits(
         dimensions { requestHost }
         sum { visits }
       }
+      breakdown7: rumPageloadEventsAdaptiveGroups(limit: 1000, filter: {datetime_geq: $week, datetime_lt: $until}) {
+        dimensions { requestHost countryName deviceType userAgentOS }
+        sum { visits }
+      }
       month0: rumPageloadEventsAdaptiveGroups(limit: 1000, filter: {datetime_geq: $m0, datetime_lt: $m1}) {
         dimensions { requestHost }
         sum { visits }
@@ -69,6 +73,33 @@ def metric(groups):
         for group in groups
         if str(group.get("dimensions", {}).get("requestHost", "")).lower().rstrip(".") in ALLOWED_HOSTS
     )))
+
+def audience_breakdown(groups):
+    """Aggregate anonymous seven-day visits by three Cloudflare dimensions."""
+    if len(groups) >= 1000:
+        raise RuntimeError("Limite de grupos de audiencia alcanzado; no publicar totales parciales.")
+    mappings = {"countries": "countryName", "devices": "deviceType", "systems": "userAgentOS"}
+    totals = {category: {} for category in mappings}
+    for group in groups:
+        dimensions = group.get("dimensions") or {}
+        host = str(dimensions.get("requestHost") or "").lower().rstrip(".")
+        if host not in ALLOWED_HOSTS:
+            continue
+        n = float((group.get("sum") or {}).get("visits") or 0)
+        for category, field in mappings.items():
+            name = str(dimensions.get(field) or "No identificado").strip() or "No identificado"
+            totals[category][name] = totals[category].get(name, 0.0) + n
+    return {
+        "period_days": 7,
+        **{
+            category: [
+                {"name": name, "visits": int(round(visits))}
+                for name, visits in sorted(items.items(), key=lambda pair: (-pair[1], pair[0]))[:15]
+                if visits > 0
+            ]
+            for category, items in totals.items()
+        },
+    }
 
 def main():
     token = os.getenv("CF_ANALYTICS_TOKEN", "").strip()
@@ -114,6 +145,7 @@ def main():
             "days7": metric(data.get("week") or []),
             "days30": sum(metric(data.get("month" + str(i)) or []) for i in range(5)),
         },
+        "audience": audience_breakdown(data.get("breakdown7") or []),
     }
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
     REPORT_PATH.write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
