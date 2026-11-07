@@ -78,6 +78,9 @@ def main():
     if not accounts:
         raise RuntimeError("Cloudflare no devolvio la cuenta. Verifica el ID y el permiso Account Analytics Read.")
     data = accounts[0]
+    for window in ("today", "week", "month"):
+        groups = data.get(window) or []
+        print("VERIFICACION", window, "grupos:", len(groups), "hosts:", [str(g.get("dimensions", {}).get("requestHost", "")) for g in groups][:10], "visitas:", [g.get("sum", {}).get("visits") for g in groups][:10])
     summary = {
         "source": "Cloudflare Web Analytics",
         "host": "auradigitaljal.com",
