@@ -1,0 +1,30 @@
+name: Aura Digital - Actualizar visitas Cloudflare
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: aura-web-visits
+  cancel-in-progress: false
+jobs:
+  visits:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar Aura Web Studio
+        uses: actions/checkout@v4
+      - name: Consultar visitas reales en Cloudflare
+        env:
+          CF_ANALYTICS_TOKEN: ${{ secrets.CF_ANALYTICS_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: python3 scripts/update_web_visits.py
+      - name: Publicar resumen sin credenciales
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add analytics/visitas.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Actualizar resumen de visitas de Aura Digital"
+            git push origin HEAD:main
+          fi
