@@ -19,7 +19,10 @@ REPORT_PATH = Path("analytics/visitas.json")
 # Consultamos por dominio: el token publico del beacon y el siteTag interno
 # de la API de RUM pueden ser diferentes.
 QUERY = """
-query AuraVisits($account: String!, $today: Time!, $week: Time!, $month: Time!, $until: Time!) {
+query AuraVisits(
+  $account: String!, $today: Time!, $week: Time!, $until: Time!,
+  $m0: Time!, $m1: Time!, $m2: Time!, $m3: Time!, $m4: Time!
+) {
   viewer {
     accounts(filter: {accountTag: $account}) {
       today: rumPageloadEventsAdaptiveGroups(limit: 1000, filter: {datetime_geq: $today, datetime_lt: $until}) {
@@ -30,7 +33,23 @@ query AuraVisits($account: String!, $today: Time!, $week: Time!, $month: Time!, 
         dimensions { requestHost }
         sum { visits }
       }
-      month: rumPageloadEventsAdaptiveGroups(limit: 1000, filter: {datetime_geq: $month, datetime_lt: $until}) {
+      month0: rumPageloadEventsAdaptiveGroups(limit: 1000, filter: {datetime_geq: $m0, datetime_lt: $m1}) {
+        dimensions { requestHost }
+        sum { visits }
+      }
+      month1: rumPageloadEventsAdaptiveGroups(limit: 1000, filter: {datetime_geq: $m1, datetime_lt: $m2}) {
+        dimensions { requestHost }
+        sum { visits }
+      }
+      month2: rumPageloadEventsAdaptiveGroups(limit: 1000, filter: {datetime_geq: $m2, datetime_lt: $m3}) {
+        dimensions { requestHost }
+        sum { visits }
+      }
+      month3: rumPageloadEventsAdaptiveGroups(limit: 1000, filter: {datetime_geq: $m3, datetime_lt: $m4}) {
+        dimensions { requestHost }
+        sum { visits }
+      }
+      month4: rumPageloadEventsAdaptiveGroups(limit: 1000, filter: {datetime_geq: $m4, datetime_lt: $until}) {
         dimensions { requestHost }
         sum { visits }
       }
@@ -63,7 +82,11 @@ def main():
         "account": account,
         "today": iso_utc(midnight),
         "week": iso_utc(midnight - timedelta(days=6)),
-        "month": iso_utc(midnight - timedelta(days=29)),
+        "m0": iso_utc(midnight - timedelta(days=29)),
+        "m1": iso_utc(midnight - timedelta(days=22)),
+        "m2": iso_utc(midnight - timedelta(days=15)),
+        "m3": iso_utc(midnight - timedelta(days=8)),
+        "m4": iso_utc(midnight - timedelta(days=1)),
         "until": iso_utc(now + timedelta(seconds=1)),
     }
     req = Request(API,
@@ -78,7 +101,7 @@ def main():
     if not accounts:
         raise RuntimeError("Cloudflare no devolvio la cuenta. Verifica el ID y el permiso Account Analytics Read.")
     data = accounts[0]
-    for window in ("today", "week", "month"):
+    for window in ("today", "week", "month0", "month1", "month2", "month3", "month4"):
         groups = data.get(window) or []
         print("VERIFICACION", window, "grupos:", len(groups), "visitas de sitio comercial:", metric(groups))
     summary = {
@@ -89,7 +112,7 @@ def main():
         "visits": {
             "today": metric(data.get("today") or []),
             "days7": metric(data.get("week") or []),
-            "days30": metric(data.get("month") or []),
+            "days30": sum(metric(data.get("month" + str(i)) or []) for i in range(5)),
         },
     }
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
