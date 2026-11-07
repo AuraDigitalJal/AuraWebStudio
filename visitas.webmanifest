@@ -1,0 +1,25 @@
+{
+  "name": "Aura Digital · Estadísticas",
+  "short_name": "Aura Visitas",
+  "description": "Monitor de visitas de la página comercial de Aura Digital",
+  "lang": "es-MX",
+  "start_url": "./visitas.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#151817",
+  "icons": [
+    {
+      "src": "./iconos/aura-visitas-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./iconos/aura-visitas-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
