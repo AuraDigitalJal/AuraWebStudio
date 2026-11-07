@@ -1,0 +1,45 @@
+name: Aura Digital - Configurar consulta directa Cloudflare
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/aura-live-bootstrap.yml
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  configure-live-analytics:
+    runs-on: ubuntu-latest
+    env:
+      CF_ANALYTICS_TOKEN: ${{ secrets.CF_ANALYTICS_TOKEN }}
+      CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+    steps:
+      - name: Transferencia segura al backend de Aura
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "$CF_ANALYTICS_TOKEN" ] || [ -z "$CF_ACCOUNT_ID" ]; then
+            echo "Falta configurar CF_ANALYTICS_TOKEN o CF_ACCOUNT_ID en los secretos del repositorio."
+            exit 1
+          fi
+          python3 - <<'PY'
+          import os,json,urllib.request,urllib.parse,urllib.error
+          endpoint="https://rcstxomjsmvqtpxoekyk.supabase.co/functions/v1/aura-live-visits/bootstrap"
+          oidc_url=os.environ["ACTIONS_ID_TOKEN_REQUEST_URL"]+"&audience="+urllib.parse.quote("aura-live-visits-bootstrap")
+          request=urllib.request.Request(oidc_url,headers={"Authorization":"Bearer "+os.environ["ACTIONS_ID_TOKEN_REQUEST_TOKEN"]})
+          try:
+              with urllib.request.urlopen(request, timeout=20) as response:
+                  oidc=json.load(response)["value"]
+              payload=json.dumps({"token":os.environ["CF_ANALYTICS_TOKEN"],"account":os.environ["CF_ACCOUNT_ID"]}).encode()
+              request=urllib.request.Request(endpoint,method="POST",data=payload,headers={"Authorization":"Bearer "+oidc,"Content-Type":"application/json"})
+              with urllib.request.urlopen(request, timeout=25) as response:
+                  result=json.load(response)
+              if not result.get("ok"):
+                  raise RuntimeError("El servidor rechazo la configuración")
+              print("Cuenta Cloudflare conectada al backend de Aura; credenciales cifradas en Supabase Vault.")
+          except urllib.error.HTTPError as exc:
+              print("No fue posible autorizar la conexión. Código HTTP:",exc.code)
+              print(exc.read().decode("utf-8")[:500])
+              raise SystemExit(1)
+          PY
