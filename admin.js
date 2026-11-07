@@ -660,9 +660,9 @@
             <section class="aura-audience-card" aria-label="Visitas por sistema operativo"><h3>Sistemas operativos</h3><div class="aura-audience-items" id="auraVisitSystems"><span class="aura-audience-empty">Cargando…</span></div></section>
           </div>
         </div>
-        <p class="aura-visits-state" id="auraVisitsState" role="status">Los datos se sincronizan aproximadamente cada 15 minutos.</p>
+        <p class="aura-visits-state" id="auraVisitsState" role="status">Consulta directa a Cloudflare cada vez que actualices.</p>
         <div class="aura-visits-footer">
-          <button type="button" id="auraVisitReload">↻ Ver últimos datos</button>
+          <button type="button" id="auraVisitReload">↻ Actualizar ahora</button>
           <a href="https://dash.cloudflare.com/" target="_blank" rel="noopener noreferrer">Ver visitas en Cloudflare ↗</a>
         </div>
       </div>`;
@@ -712,27 +712,22 @@
         parent.appendChild(wrap);
       }
     }
-    const VISITS_REPORT_REPO='AuraDigitalJal/AuraWebStudio';
     let updatingFromCloudflare=false;
-
-    // Lee el último reporte desde la API de GitHub: no depende de la caché de Pages.
-    // La lectura es pública; solo el inicio de una consulta nueva requiere GitHub conectado.
+    const AURA_LIVE_VISITS_URL='https://rcstxomjsmvqtpxoekyk.supabase.co/functions/v1/aura-live-visits';
     async function fetchVisitsReport(){
-      const apiUrl='https://api.github.com/repos/'+VISITS_REPORT_REPO+'/contents/'+VISITS_REPORT_FILE+'?ref=main&fresh='+Date.now();
+      // Esta llamada consulta Cloudflare en cada pulsación: no lee GitHub ni un archivo guardado.
+      const controller=new AbortController();
+      const timeout=setTimeout(()=>controller.abort(),18000);
       try{
-        const response=await fetch(apiUrl,{cache:'no-store',headers:{'Accept':'application/vnd.github+json'}});
-        if(!response.ok)throw new Error('HTTP '+response.status);
-        const file=await response.json();
-        if(file.encoding!=='base64'||!file.content)throw new Error('Respuesta sin datos');
-        const bytes=Uint8Array.from(atob(file.content.replace(/\s/g,'')),character=>character.charCodeAt(0));
-        return JSON.parse(new TextDecoder().decode(bytes));
-      }catch(apiError){
-        const url=new URL('analytics/visitas.json',document.baseURI);
-        url.searchParams.set('fresh',String(Date.now()));
-        const response=await fetch(url,{cache:'no-store'});
-        if(!response.ok)throw new Error('No se pudo leer el reporte ('+response.status+').');
-        return response.json();
-      }
+        const response=await fetch(AURA_LIVE_VISITS_URL+'?ts='+Date.now(),{
+          cache:'no-store',credentials:'omit',signal:controller.signal,
+          headers:{'Accept':'application/json'}
+        });
+        if(!response.ok)throw new Error('Cloudflare no respondió correctamente (HTTP '+response.status+').');
+        const data=await response.json();
+        if(data?.live!==true)throw new Error('La consulta no fue en vivo.');
+        return data;
+      }finally{clearTimeout(timeout)}
     }
 
     function renderVisitsReport(data,suffix=''){
@@ -760,31 +755,32 @@
       if(Number.isNaN(updated.getTime()))throw new Error('Fecha del reporte inválida');
       const minutes=Math.max(0,Math.floor((Date.now()-updated.getTime())/60000));
       const dateLabel=updated.toLocaleString('es-MX',{dateStyle:'short',timeStyle:'short',timeZone:'America/Mexico_City'});
-      $('#auraVisitsState').textContent='Última consulta a Cloudflare: '+dateLabel+
+      $('#auraVisitsState').textContent='Cloudflare en vivo · Consultado: '+dateLabel+
         ' · '+(minutes<1?'hace menos de 1 min':'hace '+minutes+' min')+(suffix?' · '+suffix:'');
     }
 
-    async function refreshVisits(showNotice=false){
+    async function refreshVisits(){
       const button=$('#auraVisitReload'),status=$('#auraVisitsState');
       if(updatingFromCloudflare)return;
       updatingFromCloudflare=true;
       button.disabled=true;
-      button.textContent='Consultando último reporte…';
+      button.textContent='Consultando Cloudflare…';
+      status.textContent='Consultando visitas directamente en Cloudflare…';
       try{
         const data=await fetchVisitsReport();
-        renderVisitsReport(data,showNotice?'Último reporte disponible':'');
+        renderVisitsReport(data,'Datos recién consultados');
       }catch(error){
-        status.textContent='No se pudo consultar el último reporte: '+error.message;
+        status.textContent='No se pudieron actualizar las cifras en vivo: '+
+          (error.name==='AbortError'?'la consulta tardó demasiado.':error.message);
       }finally{
         button.disabled=false;
-        button.textContent='↻ Ver últimos datos';
+        button.textContent='↻ Actualizar ahora';
         updatingFromCloudflare=false;
       }
     }
-    $('#auraVisitReload').addEventListener('click',()=>refreshVisits(true));
-    refreshVisits(false);
-    // Mantener el monitor al día si el editor sigue abierto.
-    setInterval(()=>{if(document.visibilityState==='visible')refreshVisits(false)},60000);
+    $('#auraVisitReload').addEventListener('click',refreshVisits);
+    refreshVisits();
+    setInterval(()=>{if(document.visibilityState==='visible')refreshVisits()},120000);
   }
 
   async function init(){
