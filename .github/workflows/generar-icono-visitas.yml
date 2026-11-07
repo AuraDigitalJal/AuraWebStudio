@@ -1,0 +1,53 @@
+name: Aura Digital - Icono de visitas para iPhone
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - scripts/generar_icono_visitas.py
+      - .github/workflows/generar-icono-visitas.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aura-visitas-icono
+  cancel-in-progress: false
+
+jobs:
+  generar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar Aura Web Studio
+        uses: actions/checkout@v4
+      - name: Instalar procesador de imágenes
+        run: python3 -m pip install --quiet Pillow==11.3.0
+      - name: Componer el logo oficial sobre negro
+        run: python3 scripts/generar_icono_visitas.py
+      - name: Guardar iconos en el sitio
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/aura-icons"
+          cp iconos/aura-visitas-*.png "$RUNNER_TEMP/aura-icons/"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            mkdir -p iconos
+            cp "$RUNNER_TEMP"/aura-icons/aura-visitas-*.png iconos/
+            git add iconos/aura-visitas-180.png iconos/aura-visitas-192.png iconos/aura-visitas-512.png
+            if git diff --cached --quiet; then
+              echo "Los íconos ya están publicados."
+              exit 0
+            fi
+            git commit -m "Publicar icono oficial negro de Aura para iPhone"
+            if git push origin HEAD:main; then
+              echo "Iconos iPhone publicados."
+              exit 0
+            fi
+            echo "Actualización simultánea, reintentando con la rama actual."
+            sleep 2
+          done
+          exit 1
