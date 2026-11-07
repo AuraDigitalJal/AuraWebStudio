@@ -622,6 +622,21 @@
       '.aura-visits-footer button,.aura-visits-footer a{display:inline-flex;align-items:center;justify-content:center;border:1px solid #ded6cb;background:#fff;color:#37332c;border-radius:8px;text-decoration:none;padding:8px 10px;font:600 10px Inter,Arial,sans-serif;cursor:pointer}',
       '.aura-visits-footer button:hover,.aura-visits-footer a:hover{background:#f8f6f1}',
       '.aura-visits-state{color:#777168;font-size:10px;line-height:1.6;margin-top:10px}',
+      '.aura-audience{margin-top:15px;padding-top:14px;border-top:1px solid #e9e2d8}',
+      '.aura-audience-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}',
+      '.aura-audience-title strong{font-size:11px;color:#29251f}',
+      '.aura-audience-title span{font-size:9px;color:#817b71}',
+      '.aura-audience-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}',
+      '.aura-audience-card{background:#faf8f4;border:1px solid #ece4d8;border-radius:10px;padding:12px 9px;min-width:0}',
+      '.aura-audience-card h3{font-size:10px;margin:0 0 10px;color:#4e463e;font-weight:700}',
+      '.aura-audience-items{display:grid;gap:9px}',
+      '.aura-audience-name{display:flex;justify-content:space-between;gap:5px;align-items:baseline;font-size:9px;color:#5e554a}',
+      '.aura-audience-name span{overflow-wrap:anywhere}',
+      '.aura-audience-name b{font-size:9px;white-space:nowrap;color:#2c271f;font-variant-numeric:tabular-nums}',
+      '.aura-audience-bar{height:4px;background:#e8e1d6;border-radius:10px;overflow:hidden;margin-top:5px}',
+      '.aura-audience-fill{height:100%;background:#bc9b5d;border-radius:10px}',
+      '.aura-audience-empty{font-size:9px;color:#817b71;line-height:1.5}',
+      '@media(max-width:480px){.aura-audience-grid{grid-template-columns:1fr}.aura-audience-card{padding:11px 12px}}',
       '@media(max-width:420px){.aura-visits-stat strong{font-size:22px}.aura-visits{padding:12px}}'
     ].join('\n');
     document.head.appendChild(style);
@@ -637,6 +652,14 @@
           <div class="aura-visits-stat"><span>7 días</span><strong id="auraVisitWeek">—</strong></div>
           <div class="aura-visits-stat"><span>30 días</span><strong id="auraVisitMonth">—</strong></div>
         </div>
+        <div class="aura-audience">
+          <div class="aura-audience-title"><strong>Perfil de las visitas</strong><span>Últimos 7 días</span></div>
+          <div class="aura-audience-grid">
+            <section class="aura-audience-card" aria-label="Visitas por país"><h3>Países</h3><div class="aura-audience-items" id="auraVisitCountries"><span class="aura-audience-empty">Cargando…</span></div></section>
+            <section class="aura-audience-card" aria-label="Visitas por dispositivo"><h3>Dispositivos</h3><div class="aura-audience-items" id="auraVisitDevices"><span class="aura-audience-empty">Cargando…</span></div></section>
+            <section class="aura-audience-card" aria-label="Visitas por sistema operativo"><h3>Sistemas operativos</h3><div class="aura-audience-items" id="auraVisitSystems"><span class="aura-audience-empty">Cargando…</span></div></section>
+          </div>
+        </div>
         <p class="aura-visits-state" id="auraVisitsState" role="status">Consultando estadísticas…</p>
         <div class="aura-visits-footer">
           <button type="button" id="auraVisitReload">↻ Actualizar</button>
@@ -644,6 +667,51 @@
         </div>
       </div>`;
     intro.appendChild(el);
+    function audienceLabel(raw,type){
+      const value=String(raw||'No identificado').trim()||'No identificado';
+      if(type==='countries'){
+        const aliases={'Mexico':'México','United States':'Estados Unidos','United States of America':'Estados Unidos','Canada':'Canadá','Brazil':'Brasil','Spain':'España'};
+        if(aliases[value])return aliases[value];
+        if(/^[A-Z]{2}$/.test(value)&&typeof Intl.DisplayNames==='function'){
+          try{return new Intl.DisplayNames(['es-MX'],{type:'region'}).of(value)||value}catch(e){}
+        }
+        return value;
+      }
+      if(type==='devices')return ({mobile:'Celular',desktop:'Computadora',tablet:'Tablet',unknown:'Desconocido'})[value.toLowerCase()]||value;
+      return ({MacOSX:'macOS',MacOS:'macOS',macOS:'macOS',iOS:'iOS',Android:'Android',Windows:'Windows',Linux:'Linux',ChromeOS:'ChromeOS'})[value]||value;
+    }
+    function renderAudience(id,items,type){
+      const parent=$('#'+id);
+      if(!parent)return;
+      parent.replaceChildren();
+      const valid=Array.isArray(items)?items.filter(x=>x&&typeof x.name==='string'&&Number.isFinite(x.visits)&&x.visits>0):[];
+      if(!valid.length){
+        const empty=document.createElement('span');
+        empty.className='aura-audience-empty';
+        empty.textContent='Sin datos todavía';
+        parent.appendChild(empty);
+        return;
+      }
+      const total=valid.reduce((n,x)=>n+x.visits,0);
+      for(const item of valid.slice(0,5)){
+        const wrap=document.createElement('div');
+        const title=document.createElement('div');
+        title.className='aura-audience-name';
+        const name=document.createElement('span');
+        name.textContent=audienceLabel(item.name,type);
+        const count=document.createElement('b');
+        count.textContent=item.visits.toLocaleString('es-MX');
+        title.append(name,count);
+        const track=document.createElement('div');
+        track.className='aura-audience-bar';
+        const fill=document.createElement('div');
+        fill.className='aura-audience-fill';
+        fill.style.width=Math.max(0,Math.min(100,100*item.visits/total)).toFixed(1)+'%';
+        track.appendChild(fill);
+        wrap.append(title,track);
+        parent.appendChild(wrap);
+      }
+    }
     async function refreshVisits(){
       const button=$('#auraVisitReload'), status=$('#auraVisitsState');
       if(button)button.disabled=true;
@@ -659,6 +727,16 @@
           const value=metrics[key];
           if(typeof value!=='number'||!Number.isFinite(value)||value<0)throw new Error('invalid');
           $('#'+id).textContent=Math.round(value).toLocaleString('es-MX');
+        }
+        const audience=data.audience;
+        if(audience?.period_days===7){
+          renderAudience('auraVisitCountries',audience.countries,'countries');
+          renderAudience('auraVisitDevices',audience.devices,'devices');
+          renderAudience('auraVisitSystems',audience.systems,'systems');
+        }else{
+          for(const id of ['auraVisitCountries','auraVisitDevices','auraVisitSystems']){
+            const el=$('#'+id);if(el)el.textContent='Datos pendientes de sincronización';
+          }
         }
         const updated=new Date(data.updated_at);
         status.textContent='Visitas registradas por Cloudflare · Actualizado: '+(Number.isNaN(updated.getTime())?'recientemente':updated.toLocaleString('es-MX',{dateStyle:'short',timeStyle:'short',timeZone:'America/Mexico_City'}));
