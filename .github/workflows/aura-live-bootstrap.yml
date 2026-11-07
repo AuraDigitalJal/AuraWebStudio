@@ -52,7 +52,10 @@ jobs:
           import json,urllib.request,urllib.error,datetime
           url="https://rcstxomjsmvqtpxoekyk.supabase.co/functions/v1/aura-live-visits"
           try:
-              with urllib.request.urlopen(url,timeout=35) as response:
+              request=urllib.request.Request(url,headers={"Origin":"https://auradigitaljal.github.io","Accept":"application/json"})
+              with urllib.request.urlopen(request,timeout=35) as response:
+                  if response.headers.get("Access-Control-Allow-Origin")!="https://auradigitaljal.github.io":
+                      raise RuntimeError("El navegador no esta autorizado por CORS")
                   payload=json.load(response)
           except urllib.error.HTTPError as exc:
               print("La función no pudo consultar Cloudflare:",exc.code,exc.read().decode()[:600])
