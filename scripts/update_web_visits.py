@@ -12,24 +12,25 @@ from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
 API = "https://api.cloudflare.com/client/v4/graphql"
-SITE_TAG = "a1cbe51ed62c497caceb31cc91309081"
 ALLOWED_HOSTS = {"auradigitaljal.com", "www.auradigitaljal.com"}
 TIMEZONE = ZoneInfo("America/Mexico_City")
 REPORT_PATH = Path("analytics/visitas.json")
 
+# Consultamos por dominio: el token publico del beacon y el siteTag interno
+# de la API de RUM pueden ser diferentes.
 QUERY = """
-query AuraVisits($account: String!, $site: String!, $today: Time!, $week: Time!, $month: Time!, $until: Time!) {
+query AuraVisits($account: String!, $today: Time!, $week: Time!, $month: Time!, $until: Time!) {
   viewer {
     accounts(filter: {accountTag: $account}) {
-      today: rumPageloadEventsAdaptiveGroups(limit: 100, filter: {siteTag: $site, datetime_geq: $today, datetime_lt: $until}) {
+      today: rumPageloadEventsAdaptiveGroups(limit: 1000, filter: {datetime_geq: $today, datetime_lt: $until}) {
         dimensions { requestHost }
         sum { visits }
       }
-      week: rumPageloadEventsAdaptiveGroups(limit: 100, filter: {siteTag: $site, datetime_geq: $week, datetime_lt: $until}) {
+      week: rumPageloadEventsAdaptiveGroups(limit: 1000, filter: {datetime_geq: $week, datetime_lt: $until}) {
         dimensions { requestHost }
         sum { visits }
       }
-      month: rumPageloadEventsAdaptiveGroups(limit: 100, filter: {siteTag: $site, datetime_geq: $month, datetime_lt: $until}) {
+      month: rumPageloadEventsAdaptiveGroups(limit: 1000, filter: {datetime_geq: $month, datetime_lt: $until}) {
         dimensions { requestHost }
         sum { visits }
       }
@@ -42,7 +43,7 @@ def iso_utc(dt):
     return dt.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 def metric(groups):
-    if len(groups) >= 100:
+    if len(groups) >= 1000:
         raise RuntimeError("Limite de grupos alcanzado: no publicar cifras incompletas.")
     return int(round(sum(
         float(group.get("sum", {}).get("visits") or 0)
@@ -60,7 +61,6 @@ def main():
     midnight = now.astimezone(TIMEZONE).replace(hour=0, minute=0, second=0, microsecond=0)
     values = {
         "account": account,
-        "site": SITE_TAG,
         "today": iso_utc(midnight),
         "week": iso_utc(midnight - timedelta(days=6)),
         "month": iso_utc(midnight - timedelta(days=29)),
@@ -80,7 +80,7 @@ def main():
     data = accounts[0]
     for window in ("today", "week", "month"):
         groups = data.get(window) or []
-        print("VERIFICACION", window, "grupos:", len(groups), "hosts:", [str(g.get("dimensions", {}).get("requestHost", "")) for g in groups][:10], "visitas:", [g.get("sum", {}).get("visits") for g in groups][:10])
+        print("VERIFICACION", window, "grupos:", len(groups), "visitas de sitio comercial:", metric(groups))
     summary = {
         "source": "Cloudflare Web Analytics",
         "host": "auradigitaljal.com",
